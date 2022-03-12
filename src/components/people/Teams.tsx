@@ -5,6 +5,14 @@ import { IPerson, ITeam, ITeamMember } from "types";
 import { PersonPicker } from "components/people/PersonPicker";
 import { TextInput } from "components/_basis/TextInput";
 import { COLORS } from "style/variables";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDoc,
+  doc,
+} from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 const useStyles = createUseStyles({
   teams: {
@@ -102,12 +110,22 @@ export const Teams = () => {
     saveTeams();
   };
 
-  const saveTeams = () => {
+  const saveTeams = async () => {
     localStorage.setItem(LOCALSTORAGE_TEAMS_KEY, JSON.stringify(teams));
+    const firestore = getFirestore();
+    const docRef = await addDoc(
+      collection(firestore, `personal/${getAuth().currentUser?.uid}/teams`),
+      teams
+    );
   };
 
-  const loadTeams = () => {
+  const loadTeams = async () => {
     const stringValue = localStorage.getItem(LOCALSTORAGE_TEAMS_KEY);
+    const firestore = getFirestore();
+    const docRef = await getDoc(
+      doc(firestore, `personal/${getAuth().currentUser?.uid}`)
+    );
+    setTeams(docRef.data() as ITeam[]);
     if (stringValue) {
       setTeams(
         (JSON.parse(stringValue) as ITeam[]).sort((a, b) => a.id - b.id)
@@ -128,8 +146,12 @@ export const Teams = () => {
     setActiveTeam(undefined);
   };
 
-  useEffect(loadTeams, []);
-  useEffect(saveTeams, [teams]);
+  useEffect(() => {
+    loadTeams();
+  }, []);
+  useEffect(() => {
+    saveTeams();
+  }, [teams]);
 
   const classes = useStyles();
   return (
